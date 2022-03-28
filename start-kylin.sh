@@ -1,3 +1,5 @@
+cd kernel
+
 qemu-system-riscv64 \
   -machine virt \
   -nographic \
