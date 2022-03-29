@@ -1,11 +1,11 @@
 use crate::batch::run_next_app;
-use crate::println;
 use crate::syscall::syscall;
+use crate::{info, println};
 use core::arch::global_asm;
 use riscv::register::mtvec::TrapMode;
 use riscv::register::scause::Exception;
 use riscv::register::scause::Trap;
-use riscv::register::{scause, stval, stvec};
+use riscv::register::{scause, sepc, stval, stvec};
 use stvec::write;
 
 mod context;
@@ -31,8 +31,10 @@ pub fn init() {
 pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
     let scause = scause::read();
     let stval = stval::read();
+    let sepc = sepc::read();
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
+            info!("[kernel] spec: {:#x}", sepc);
             println!("[kernel] Receive User Environment Call, kernel handle it.");
             cx.sepc += 4; // trap处理后的下一条指令地址 这里下一条指令是 __restore 的入口
             cx.x[10] = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
