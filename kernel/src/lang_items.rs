@@ -14,5 +14,10 @@ fn panic(info: &PanicInfo) -> ! {
     } else {
         println!("[Kernel] Panicked: {}", info.message().unwrap());
     }
+
+    // unsafe {
+    //     print_stack_track();
+    // }
+
     shutdown()
 }

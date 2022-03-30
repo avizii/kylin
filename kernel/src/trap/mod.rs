@@ -1,6 +1,6 @@
 use crate::batch::run_next_app;
+use crate::println;
 use crate::syscall::syscall;
-use crate::{info, println};
 use core::arch::global_asm;
 use riscv::register::mtvec::TrapMode;
 use riscv::register::scause::Exception;
@@ -34,9 +34,9 @@ pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
     let sepc = sepc::read();
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
-            info!("[kernel] spec: {:#x}", sepc);
-            println!("[kernel] Receive User Environment Call, kernel handle it.");
-            cx.sepc += 4; // trap处理后的下一条指令地址 这里下一条指令是 __restore 的入口
+            // info!("[kernel] spec: {:#x}", sepc);
+            // println!("[kernel] Receive User Environment Call, kernel handle it.");
+            cx.sepc += 4; // trap处理后的下一条指令地址
             cx.x[10] = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
         }
         Trap::Exception(Exception::StoreFault) | Trap::Exception(Exception::StorePageFault) => {

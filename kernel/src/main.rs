@@ -6,12 +6,17 @@ use core::arch::global_asm;
 
 #[macro_use]
 mod batch;
+mod config;
 mod console;
 mod lang_items;
+mod loader;
 mod log;
 mod sbi;
+mod stack;
+mod stack_trace;
 mod sync;
 mod syscall;
+mod task;
 mod trap;
 
 global_asm!(include_str!("entry.asm"));
