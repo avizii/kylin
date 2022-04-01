@@ -1,3 +1,5 @@
+cd kernel
+
 /Users/wudj/Workspace/os2022/riscv64-unknown-elf-tool/bin/riscv64-unknown-elf-gdb \
     -ex 'file target/riscv64gc-unknown-none-elf/release/os' \
     -ex 'set arch riscv:rv64' \

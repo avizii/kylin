@@ -1,57 +1,66 @@
-use crate::batch::run_next_app;
-use crate::println;
-use crate::syscall::syscall;
-use core::arch::global_asm;
-use riscv::register::mtvec::TrapMode;
-use riscv::register::scause::Exception;
-use riscv::register::scause::Trap;
-use riscv::register::{scause, sepc, stval, stvec};
-use stvec::write;
-
 mod context;
 
-pub use context::TrapContext;
+use crate::syscall::syscall;
+use crate::task::{exit_current_and_run_next, suspend_current_and_run_next};
+use crate::timer::set_next_trigger;
+use core::arch::global_asm;
+use riscv::register::{
+    mtvec::TrapMode,
+    scause::{self, Exception, Interrupt, Trap},
+    sie, stval, stvec,
+};
 
 global_asm!(include_str!("trap.S"));
 
-// initialize CSR `stvec` as the entry of `__alltraps`
+/// initialize CSR `stvec` as the entry of `__alltraps`
 pub fn init() {
-    // FFI
     extern "C" {
         fn __alltraps();
     }
-
     unsafe {
-        // stvec -> 控制 Trap 处理代码的入口地址
-        write(__alltraps as usize, TrapMode::Direct);
+        stvec::write(__alltraps as usize, TrapMode::Direct);
+    }
+}
+
+/// timer interrupt enabled
+pub fn enable_timer_interrupt() {
+    unsafe {
+        sie::set_stimer();
     }
 }
 
 #[no_mangle]
+/// handle an interrupt, exception, or system call from user space
 pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
-    let scause = scause::read();
-    let stval = stval::read();
-    let sepc = sepc::read();
+    let scause = scause::read(); // get trap cause
+    let stval = stval::read(); // get extra value
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
-            // info!("[kernel] spec: {:#x}", sepc);
-            // println!("[kernel] Receive User Environment Call, kernel handle it.");
-            cx.sepc += 4; // trap处理后的下一条指令地址
+            cx.sepc += 4;
             cx.x[10] = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
         }
         Trap::Exception(Exception::StoreFault) | Trap::Exception(Exception::StorePageFault) => {
-            println!("[kernel] PageFault in application, kernel killed it.");
-            run_next_app();
+            println!("[kernel] PageFault in application, bad addr = {:#x}, bad instruction = {:#x}, kernel killed it.", stval, cx.sepc);
+            exit_current_and_run_next();
         }
         Trap::Exception(Exception::IllegalInstruction) => {
             println!("[kernel] IllegalInstruction in application, kernel killed it.");
-            run_next_app();
+            exit_current_and_run_next();
         }
-        _ => panic!(
-            "Unsupported trap {:?}, stval = {:#x}!",
-            scause.cause(),
-            stval
-        ),
+        Trap::Interrupt(Interrupt::SupervisorTimer) => {
+            set_next_trigger();
+            suspend_current_and_run_next();
+        }
+        _ => {
+            panic!(
+                "Unsupported trap {:?}, stval = {:#x}!",
+                scause.cause(),
+                stval
+            );
+        }
     }
     cx
 }
+
+use crate::println;
+pub use context::TrapContext;

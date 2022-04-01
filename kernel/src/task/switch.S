@@ -6,23 +6,29 @@
     ld s\n, (\n+2)*8(a1)
 .endm
     .section .text
-    .global __switch
+    .globl __switch
 __switch:
-    # stage 2
+    # __switch(
+    #     current_task_cx_ptr: *mut TaskContext,
+    #     next_task_cx_ptr: *const TaskContext
+    # )
+    # save kernel stack of current task
     sd sp, 8(a0)
+    # save ra & s0~s11 of current execution
     sd ra, 0(a0)
     .set n, 0
     .rept 12
         SAVE_SN %n
         .set n, n + 1
     .endr
-    # stage 3
+    # restore ra & s0~s11 of next execution
     ld ra, 0(a1)
     .set n, 0
     .rept 12
         LOAD_SN %n
         .set n, n + 1
     .endr
+    # restore kernel stack of next task
     ld sp, 8(a1)
-    # pc jump to the return address that is stored in ra register.
     ret
+

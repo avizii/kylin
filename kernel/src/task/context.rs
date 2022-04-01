@@ -1,43 +1,52 @@
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TaskContext {
-    /// return address register
     ra: usize,
-    /// stack pointer register
     sp: usize,
-    /// `[s0~s11]` Saved registers
     s: [usize; 12],
 }
 
 impl TaskContext {
-    pub fn init() -> Self {
+    pub fn zero_init() -> Self {
         Self {
             ra: 0,
             sp: 0,
             s: [0; 12],
         }
     }
-
-    // pub fn goto_restore(kernel_stack_ptr: usize) -> Self {
-    //     extern "C" {
-    //         fn __restore();
-    //     }
-    //
-    //     Self {
-    //         ra: __restore as usize,
-    //         sp: kernel_stack_ptr,
-    //         s: [0; 12],
-    //     }
-    // }
-
-    pub fn goto_restore(mut self, kernel_stack_ptr: usize) -> Self {
+    pub fn goto_restore(kstack_ptr: usize) -> Self {
         extern "C" {
             fn __restore();
         }
+        Self {
+            ra: __restore as usize,
+            sp: kstack_ptr,
+            s: [0; 12],
+        }
+    }
+}
 
-        self.ra = __restore as usize;
-        self.sp = kernel_stack_ptr;
+use core::fmt::{Display, Formatter};
 
-        self
+impl Display for TaskContext {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "ra: {:#x}, sp: {:#x}, s0~s11: [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}]",
+            self.ra,
+            self.sp,
+            self.s[0],
+            self.s[1],
+            self.s[2],
+            self.s[3],
+            self.s[4],
+            self.s[5],
+            self.s[6],
+            self.s[7],
+            self.s[8],
+            self.s[9],
+            self.s[10],
+            self.s[11]
+        )
     }
 }

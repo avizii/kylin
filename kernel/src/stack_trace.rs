@@ -2,7 +2,7 @@ use crate::println;
 use core::arch::asm;
 use core::ptr;
 
-pub unsafe fn print_stack_track() {
+pub unsafe fn _print_stack_track() {
     let mut fp: *const usize;
 
     asm!("mv {}, fp", out(reg) fp);
